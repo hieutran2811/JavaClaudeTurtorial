@@ -1,0 +1,4 @@
+package org.example.performance.jmh_generated;
+public class JMHBenchmarkDemo_MapLookupBenchmark_jmhType extends JMHBenchmarkDemo_MapLookupBenchmark_jmhType_B3 {
+}
+

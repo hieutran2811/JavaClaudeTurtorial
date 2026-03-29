@@ -1,0 +1,4 @@
+package org.example.performance.jmh_generated;
+public class JMHBenchmarkDemo_DeadCodeBenchmark_jmhType extends JMHBenchmarkDemo_DeadCodeBenchmark_jmhType_B3 {
+}
+

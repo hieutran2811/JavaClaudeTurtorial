@@ -1,0 +1,4 @@
+package org.example.performance.jmh_generated;
+public class JMHBenchmarkDemo_StringConcatBenchmark_jmhType extends JMHBenchmarkDemo_StringConcatBenchmark_jmhType_B3 {
+}
+
