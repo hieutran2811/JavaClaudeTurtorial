@@ -1,6 +1,6 @@
 # Java Advanced Learning Roadmap
 > Lộ trình học Java chuyên sâu dành cho Solution Architect
-> Bắt đầu: 2026-03-22 | Cập nhật lần cuối: 2026-03-29 (bài 4.3)
+> Bắt đầu: 2026-03-22 | Cập nhật lần cuối: 2026-03-30 (bài 8.1)
 
 ---
 
@@ -12,14 +12,14 @@
 | 2 | Concurrency & Threading | 6/6 | ✅ **Hoàn thành** |
 | 3 | Collections & Generics nâng cao | 4/4 | ✅ **Hoàn thành** |
 | 4 | Design Patterns thực chiến | 5/5 | ✅ **Hoàn thành** |
-| 5 | Performance & Profiling | 0/4 | ⬜ Chưa bắt đầu |
-| 6 | I/O & NIO / Reactive | 0/4 | ⬜ Chưa bắt đầu |
-| 7 | Reflection, Annotation, Bytecode | 0/3 | ⬜ Chưa bắt đầu |
-| 8 | Testing chuyên sâu | 0/3 | ⬜ Chưa bắt đầu |
+| 5 | Performance & Profiling | 4/4 | ✅ **Hoàn thành** |
+| 6 | I/O & NIO / Reactive | 4/4 | ✅ **Hoàn thành** |
+| 7 | Reflection, Annotation, Bytecode | 3/3 | ✅ **Hoàn thành** |
+| 8 | Testing chuyên sâu | 1/3 | 🔵 Đang học |
 | 9 | Architecture Patterns (SA level) | 0/5 | ⬜ Chưa bắt đầu |
 | 10 | Java Ecosystem & Tooling | 0/3 | ⬜ Chưa bắt đầu |
 
-**Tổng tiến độ: 19 / 41 bài** `[█████████░] 46%` — Module 1 ✅ | Module 2 ✅ | Module 3 ✅ | Module 4 ✅ | Module 5 🔵
+**Tổng tiến độ: 31 / 41 bài** `[███████████████░] 76%` — Module 1 ✅ | Module 2 ✅ | Module 3 ✅ | Module 4 ✅ | Module 5 ✅ | Module 6 ✅ | Module 7 ✅ | Module 8 🔵
 
 ---
 
@@ -95,10 +95,10 @@
 
 | # | File | Chủ đề | Ngày hoàn thành | Ghi chú |
 |---|------|--------|-----------------|---------|
-| 5.1 | `JMHBenchmarkDemo.java` | JMH micro-benchmark đúng cách, JIT bias | — | ⬜ |
-| 5.2 | `GCTuningDemo.java` | GC flags (-Xmx, -XX:+UseG1GC), GC log analysis | — | ⬜ |
-| 5.3 | `MemoryLeakDemo.java` | Detect & fix memory leak, heap dump analysis | — | ⬜ |
-| 5.4 | `ProfilingDemo.java` | async-profiler, flame graph, CPU vs allocation profiling | — | ⬜ |
+| 5.1 | `JMHBenchmarkDemo.java` | JMH micro-benchmark đúng cách, JIT bias | 2026-03-29 | ✅ |
+| 5.2 | `GCTuningDemo.java` | GC flags (-Xmx, -XX:+UseG1GC), GC log analysis | 2026-03-30 | ✅ |
+| 5.3 | `MemoryLeakDemo.java` | Detect & fix memory leak, heap dump analysis | 2026-03-30 | ✅ |
+| 5.4 | `ProfilingDemo.java` | async-profiler, flame graph, CPU vs allocation profiling | 2026-03-30 | ✅ |
 
 ---
 
@@ -109,10 +109,10 @@
 
 | # | File | Chủ đề | Ngày hoàn thành | Ghi chú |
 |---|------|--------|-----------------|---------|
-| 6.1 | `BlockingIODemo.java` | InputStream/OutputStream, BufferedIO, RandomAccessFile | — | ⬜ |
-| 6.2 | `NIODemo.java` | ByteBuffer, Channel, Selector (non-blocking) | — | ⬜ |
-| 6.3 | `NIO2Demo.java` | Path, Files, WatchService, AsynchronousFileChannel | — | ⬜ |
-| 6.4 | `ReactiveDemo.java` | Project Reactor, Mono/Flux, backpressure | — | ⬜ |
+| 6.1 | `BlockingIODemo.java` | InputStream/OutputStream, BufferedIO, RandomAccessFile | 2026-03-30 | ✅ |
+| 6.2 | `NIODemo.java` | ByteBuffer, Channel, Selector (non-blocking) | 2026-03-30 | ✅ |
+| 6.3 | `NIO2Demo.java` | Path, Files, WatchService, AsynchronousFileChannel | 2026-03-30 | ✅ |
+| 6.4 | `ReactiveDemo.java` | Project Reactor, Mono/Flux, backpressure | 2026-03-30 | ✅ |
 
 ---
 
@@ -123,9 +123,9 @@
 
 | # | File | Chủ đề | Ngày hoàn thành | Ghi chú |
 |---|------|--------|-----------------|---------|
-| 7.1 | `ReflectionDemo.java` | Class introspection, dynamic proxy (JDK & CGLIB) | — | ⬜ |
-| 7.2 | `AnnotationProcessorDemo.java` | Custom annotation + runtime processing | — | ⬜ |
-| 7.3 | `BytecodeDemo.java` | Đọc bytecode với javap, ASM basics, instrumentation | — | ⬜ |
+| 7.1 | `ReflectionDemo.java` | Class introspection, dynamic proxy (JDK & CGLIB) | 2026-03-30 | ✅ |
+| 7.2 | `AnnotationProcessorDemo.java` | Custom annotation + runtime processing | 2026-03-30 | ✅ |
+| 7.3 | `BytecodeDemo.java` | Đọc bytecode với javap, ASM basics, instrumentation | 2026-03-30 | ✅ |
 
 ---
 
@@ -136,7 +136,7 @@
 
 | # | File | Chủ đề | Ngày hoàn thành | Ghi chú |
 |---|------|--------|-----------------|---------|
-| 8.1 | `MockingDeepDiveDemo.java` | Mockito internals, Spy vs Mock, verification | — | ⬜ |
+| 8.1 | `MockingDeepDiveDemo.java` | Mockito internals, Spy vs Mock, verification | 2026-03-30 | ✅ |
 | 8.2 | `TestContainersDemo.java` | TestContainers: DB, Kafka, Redis trong integration test | — | ⬜ |
 | 8.3 | `MutationTestingDemo.java` | PIT mutation testing, test quality metrics | — | ⬜ |
 
@@ -193,16 +193,29 @@
 | 2026-03-29 | 4.3 BehavioralPatternsDemo | EventBus type-safe pub/sub. Strategy+Map=plugin registry. Command undo/redo+audit. Chain=middleware short-circuit. State Machine thay switch→extensible. Domain Event phải immutable. |
 | 2026-03-29 | 4.4 ConcurrentPatternsDemo | Producer-Consumer: Poison Pill shutdown. PriorityBlockingQueue: task priority. DelayQueue: retry scheduling. Thread-per-request vs Reactor vs VirtualThread: VT wins I/O. Active Object: single servant = no contention. Half-Sync/Half-Async: async accept + sync process. ObjectPool: Semaphore+LIFO+validate. |
 | 2026-03-29 | 4.5 AntiPatternsDemo | God Object=SRP vi phạm→Bounded Context. Service Locator=hidden dep→Constructor DI. Singleton Abuse=mutable global→ThreadLocal scope. Primitive Obsession→Value Object (record). Anemic Domain=data bag+proc svc→Rich Entity. Magic Numbers→Enum+NamedConstant. |
+| 2026-03-29 | 5.1 JMHBenchmarkDemo | Dùng JMH không System.nanoTime. Blackhole.consume() chặn dead-code elimination. @State tránh constant folding. StringBuilder 20-50x nhanh hơn String+. parallelStream chỉ win khi N>10k + CPU-bound. |
+| 2026-03-30 | 5.2 GCTuningDemo | G1=default balanced; ZGC=<1ms pause dùng cho latency-sensitive. Set Xms=Xmx tránh resize overhead. LUÔN bật GC log + HeapDump ở production. Tune GC sau khi fix leak, không trước. System.gc() trong code = anti-pattern, dùng -XX:+DisableExplicitGC. |
+| 2026-03-30 | 5.3 MemoryLeakDemo | Leak = object reachable nhưng không còn dùng. Top causes: static collection, listener leak, ThreadLocal không remove(), inner class capture, unclosed resource. Strong>Soft>Weak>Phantom. ThreadLocal: luôn remove() trong finally. WeakHashMap tự expire khi key GC'd. Cleaner thay thế finalize(). |
+| 2026-03-30 | 5.4 ProfilingDemo | Measure first, optimize second. async-profiler: cpu/alloc/lock/wall mode. Flame graph: frame rộng gần top = hot path. JFR continuous ở production (<1% overhead). Pattern.compile trong hot path = 10-50x slow. LongAdder vs AtomicLong: per-cell vs CAS. Wall-clock > CPU = I/O bound, không phải CPU bound. |
+| 2026-03-30 | 6.1 BlockingIODemo | Buffering = optimization #1: unbuffered 1 syscall/byte vs 1 syscall/8KB. FileReader/Writer nguy hiểm (platform charset) → LUÔN dùng InputStreamReader + UTF-8. FileChannel.transferTo = zero-copy (sendfile). MappedByteBuffer cho large file random access. Buffer sweet spot: 8-16KB. try-with-resources bắt buộc. |
+| 2026-03-30 | 6.2 NIODemo | ByteBuffer state machine: flip→read, clear→write, compact→preserve unread. Selector = Reactor pattern: 1 thread, N channels. iter.remove() sau mỗi key. OP_WRITE chỉ register khi có data. SelectionKey.attachment() lưu per-connection state. Scatter/gather = vectored I/O, 1 syscall. NIO wins ở high concurrency, VirtualThread cho simplicity. |
+| 2026-03-30 | 6.3 NIO2Demo | Path immutable thay File. toRealPath() resolve symlinks (cần file tồn tại). WatchService: key.reset() bắt buộc sau mỗi poll, không recursive tự động. walkFileTree: SKIP_SUBTREE bỏ qua target/. AsyncFileChannel: CompletionHandler chạy trên pool thread, không block trong handler. ZipFileSystem: đọc/ghi ZIP như thư mục thường. |
+| 2026-03-30 | 6.4 ReactiveDemo | Mono=0..1, Flux=0..N, lazy(cold). flatMap=concurrent+unordered, concatMap=sequential+ordered, switchMap=cancel-previous. Backpressure: BaseSubscriber.request(N). onBackpressureDrop/Buffer/Latest. Hot via publish().autoConnect(). subscribeOn=source thread, publishOn=downstream thread. retryWhen(Retry.backoff). |
+| 2026-03-30 | 7.1 ReflectionDemo | getDeclaredFields/Methods vs getFields/Methods (private vs public+inherited). setAccessible(true) bypass access control. Cache Method object — lookup là expensive. InvocationTargetException wraps actual exception, unwrap bằng getCause(). JDK Proxy cần interface; CGLIB cần class. MethodHandle JIT-inlineable ≈ direct call sau warmup. TypeToken trick capture generic type qua superclass. |
+| 2026-03-30 | 7.2 AnnotationProcessorDemo | @Retention(RUNTIME) để đọc annotation lúc chạy. @Target giới hạn context. @Inherited chỉ kế thừa qua class, không qua interface/method. @Repeatable cần container annotation. Meta-annotation: annotate the annotation. Mini validator framework, mini ORM mapper, mini event bus, mini DI container đều dùng reflection + annotation kết hợp. Compile-time: AbstractProcessor + ProcessingEnvironment tạo code tại build time (Lombok/MapStruct pattern). |
+| 2026-03-30 | 7.3 BytecodeDemo | JVM = stack machine: local var array + operand stack. invokevirtual(vtable) vs invokeinterface(itable) vs invokestatic vs invokespecial vs invokedynamic. Lambda dùng invokedynamic + LambdaMetafactory (không phải anonymous class). ASM: ClassReader→ClassVisitor→ClassWriter visitor chain. javaagent: premain()+ClassFileTransformer intercepts every class load. CGLIB subclasses target (Spring @Transactional); self-invocation bypasses proxy → LazyInitializationException. final class cannot be CGLIB proxied. |
+| 2026-03-30 | 8.1 MockingDeepDiveDemo | Mock=full replacement(default null/0/false/[]), Spy=real object+selective stub. doReturn(x).when(spy).method() tránh real call lúc stub. void method: doThrow/doAnswer/doNothing. ArgumentCaptor capture argument để assert. InOrder verify thứ tự gọi. verifyNoMoreInteractions phát hiện unexpected calls. Fake(InMemoryRepo) tốt hơn mock cho state-based test. Strict stubbing phát hiện unused stubs. |
 
 ---
 
 ## Bài tiếp theo được đề xuất
 
-**→ Bài 5.1: `JMHBenchmarkDemo.java`**
-- JMH micro-benchmark đúng cách (tránh dead-code elimination, JIT bias)
-- @Benchmark, @Warmup, @Measurement, BenchmarkMode
-- Pitfalls: Black Holes, Constant Folding, Loop Unrolling
-- So sánh String concatenation vs StringBuilder vs StringJoiner
+**→ Bài 8.2: `TestContainersDemo.java`**
+- TestContainers: spin up real Docker containers in tests
+- PostgreSQL, Redis, Kafka containers trong integration test
+- @Container + @DynamicPropertySource (Spring integration)
+- Singleton container pattern (share across test class)
+- Network, wait strategies, custom images
 
 ---
 
