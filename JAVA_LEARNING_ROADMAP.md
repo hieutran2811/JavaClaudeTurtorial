@@ -1,6 +1,6 @@
 # Java Advanced Learning Roadmap
 > Lộ trình học Java chuyên sâu dành cho Solution Architect
-> Bắt đầu: 2026-03-22 | Cập nhật lần cuối: 2026-03-30 (bài 8.1)
+> Bắt đầu: 2026-03-22 | Cập nhật lần cuối: 2026-03-30 (bài 10.3 — HOÀN THÀNH TOÀN BỘ LỘ TRÌNH)
 
 ---
 
@@ -15,11 +15,11 @@
 | 5 | Performance & Profiling | 4/4 | ✅ **Hoàn thành** |
 | 6 | I/O & NIO / Reactive | 4/4 | ✅ **Hoàn thành** |
 | 7 | Reflection, Annotation, Bytecode | 3/3 | ✅ **Hoàn thành** |
-| 8 | Testing chuyên sâu | 1/3 | 🔵 Đang học |
-| 9 | Architecture Patterns (SA level) | 0/5 | ⬜ Chưa bắt đầu |
-| 10 | Java Ecosystem & Tooling | 0/3 | ⬜ Chưa bắt đầu |
+| 8 | Testing chuyên sâu | 3/3 | ✅ **Hoàn thành** |
+| 9 | Architecture Patterns (SA level) | 5/5 | ✅ **Hoàn thành** |
+| 10 | Java Ecosystem & Tooling | 3/3 | ✅ **Hoàn thành** |
 
-**Tổng tiến độ: 31 / 41 bài** `[███████████████░] 76%` — Module 1 ✅ | Module 2 ✅ | Module 3 ✅ | Module 4 ✅ | Module 5 ✅ | Module 6 ✅ | Module 7 ✅ | Module 8 🔵
+**Tổng tiến độ: 41 / 41 bài** `[████████████████████] 100% 🏆 HOÀN THÀNH` — Module 1 ✅ | Module 2 ✅ | Module 3 ✅ | Module 4 ✅ | Module 5 ✅ | Module 6 ✅ | Module 7 ✅ | Module 8 ✅ | Module 9 ✅ | Module 10 ✅
 
 ---
 
@@ -137,8 +137,8 @@
 | # | File | Chủ đề | Ngày hoàn thành | Ghi chú |
 |---|------|--------|-----------------|---------|
 | 8.1 | `MockingDeepDiveDemo.java` | Mockito internals, Spy vs Mock, verification | 2026-03-30 | ✅ |
-| 8.2 | `TestContainersDemo.java` | TestContainers: DB, Kafka, Redis trong integration test | — | ⬜ |
-| 8.3 | `MutationTestingDemo.java` | PIT mutation testing, test quality metrics | — | ⬜ |
+| 8.2 | `TestContainersDemo.java` | TestContainers: DB, Kafka, Redis trong integration test | 2026-03-30 | ✅ |
+| 8.3 | `MutationTestingDemo.java` | PIT mutation testing, test quality metrics | 2026-03-30 | ✅ |
 
 ---
 
@@ -149,11 +149,11 @@
 
 | # | File | Chủ đề | Ngày hoàn thành | Ghi chú |
 |---|------|--------|-----------------|---------|
-| 9.1 | `DomainDrivenDemo.java` | DDD: Entity, Value Object, Aggregate, Repository | — | ⬜ |
-| 9.2 | `EventSourcingDemo.java` | Event Sourcing + CQRS pattern | — | ⬜ |
-| 9.3 | `SagaPatternDemo.java` | Saga (choreography vs orchestration) distributed tx | — | ⬜ |
-| 9.4 | `ResilienceDemo.java` | Circuit Breaker, Retry, Bulkhead (Resilience4j) | — | ⬜ |
-| 9.5 | `ObservabilityDemo.java` | Structured logging, distributed tracing, metrics | — | ⬜ |
+| 9.1 | `DomainDrivenDemo.java` | DDD: Entity, Value Object, Aggregate, Repository | 2026-03-30 | ✅ |
+| 9.2 | `EventSourcingDemo.java` | Event Sourcing + CQRS pattern | 2026-03-30 | ✅ |
+| 9.3 | `SagaPatternDemo.java` | Saga (choreography vs orchestration) distributed tx | 2026-03-30 | ✅ |
+| 9.4 | `ResilienceDemo.java` | Circuit Breaker, Retry, Bulkhead (Resilience4j) | 2026-03-30 | ✅ |
+| 9.5 | `ObservabilityDemo.java` | Structured logging, distributed tracing, metrics | 2026-03-30 | ✅ |
 
 ---
 
@@ -164,9 +164,9 @@
 
 | # | File | Chủ đề | Ngày hoàn thành | Ghi chú |
 |---|------|--------|-----------------|---------|
-| 10.1 | `ModernJavaFeaturesDemo.java` | Records, Sealed classes, Pattern Matching, Text Blocks | — | ⬜ |
-| 10.2 | `MavenAdvancedDemo.java` | Maven lifecycle, plugin config, multi-module projects | — | ⬜ |
-| 10.3 | `GraalVMDemo.java` | Native Image, AOT compilation, performance tradeoffs | — | ⬜ |
+| 10.1 | `ModernJavaFeaturesDemo.java` | Records, Sealed classes, Pattern Matching, Text Blocks | 2026-03-30 | ✅ |
+| 10.2 | `MavenAdvancedDemo.java` | Maven lifecycle, plugin config, multi-module projects | 2026-03-30 | ✅ |
+| 10.3 | `GraalVMDemo.java` | Native Image, AOT compilation, performance tradeoffs | 2026-03-30 | ✅ |
 
 ---
 
@@ -205,17 +205,30 @@
 | 2026-03-30 | 7.2 AnnotationProcessorDemo | @Retention(RUNTIME) để đọc annotation lúc chạy. @Target giới hạn context. @Inherited chỉ kế thừa qua class, không qua interface/method. @Repeatable cần container annotation. Meta-annotation: annotate the annotation. Mini validator framework, mini ORM mapper, mini event bus, mini DI container đều dùng reflection + annotation kết hợp. Compile-time: AbstractProcessor + ProcessingEnvironment tạo code tại build time (Lombok/MapStruct pattern). |
 | 2026-03-30 | 7.3 BytecodeDemo | JVM = stack machine: local var array + operand stack. invokevirtual(vtable) vs invokeinterface(itable) vs invokestatic vs invokespecial vs invokedynamic. Lambda dùng invokedynamic + LambdaMetafactory (không phải anonymous class). ASM: ClassReader→ClassVisitor→ClassWriter visitor chain. javaagent: premain()+ClassFileTransformer intercepts every class load. CGLIB subclasses target (Spring @Transactional); self-invocation bypasses proxy → LazyInitializationException. final class cannot be CGLIB proxied. |
 | 2026-03-30 | 8.1 MockingDeepDiveDemo | Mock=full replacement(default null/0/false/[]), Spy=real object+selective stub. doReturn(x).when(spy).method() tránh real call lúc stub. void method: doThrow/doAnswer/doNothing. ArgumentCaptor capture argument để assert. InOrder verify thứ tự gọi. verifyNoMoreInteractions phát hiện unexpected calls. Fake(InMemoryRepo) tốt hơn mock cho state-based test. Strict stubbing phát hiện unused stubs. |
+| 2026-03-30 | 8.2 TestContainersDemo | Container scope: per-method < per-class < Singleton (fastest). WaitStrategy: forLogMessage > forListeningPort (reliable). Spring: @ServiceConnection (3.1+) > @DynamicPropertySource. TRUNCATE trong @BeforeEach cho clean state. withReuse(true) chỉ local, không CI. Pin version: postgres:16-alpine not :latest. |
+| 2026-03-30 | 8.3 MutationTestingDemo | Coverage 100% ≠ test tốt. Mutation score > 80% = healthy. CONDITIONALS_BOUNDARY → test exact boundaries (99,100,101). VOID_METHOD_CALLS → ArgumentCaptor để catch. RETURN_VALS → assert exact value. Equivalent mutant → ignore. Property-based testing kills more mutants với ít test hơn. |
+| 2026-03-30 | 9.1 DomainDrivenDemo | Value Object=immutable+equality by value (record). Entity=identity by id, mutable. Aggregate Root=entry point+enforce invariants+emit events. Repository=domain interface, infra implements (DIP). Domain Service=cross-entity logic. Application Service=thin orchestrator. Bounded Context+ACL. Rich > Anemic domain model. |
+| 2026-03-30 | 9.2 EventSourcingDemo | Event Store=append-only, never update/delete. Optimistic concurrency=expectedVersion check. apply(event)=state only, no logic. Snapshot=skip N events replay. CQRS: Write=EventStore, Read=Projection (eventually consistent). Multiple read models from same events. Time-travel: replay to any version. Upcaster cho schema evolution. |
+| 2026-03-30 | 9.3 SagaPatternDemo | Saga=chuỗi local tx + compensating tx, không dùng 2PC. Orchestration=central coordinator, visible state, complex flow. Choreography=event-driven, decoupled, simple flow. Compensate in REVERSE order, phải idempotent. Idempotency key=client UUID, server deduplicates → safe retry. Saga vs 2PC: eventual vs strong consistency. |
+| 2026-03-30 | 9.4 ResilienceDemo | CB: CLOSED→OPEN(fast-fail)→HALF_OPEN(probe). Retry: exponential backoff + jitter chống thundering herd. Bulkhead: semaphore per service, failure isolation. RateLimiter: Token Bucket(allow burst) vs Sliding Window(no boundary burst). Compose: Bulkhead→CB→RateLimit→Retry. Fallback: cache>default>fail-fast. |
+| 2026-03-30 | 9.5 ObservabilityDemo | 3 pillars: Logs(what)+Traces(where)+Metrics(how fast). MDC.clear() bắt buộc trong finally (ThreadLocal leak). Trace: traceId qua W3C traceparent header, Span=1 unit of work. RED: Rate+Errors+Duration(P99). P99>>mean=outlier vấn đề. Liveness→restart, Readiness→LB removal. Stack: OTel→Tempo+Prometheus+Loki→Grafana. |
+| 2026-03-30 | 10.1 ModernJavaFeaturesDemo | Records=1 dòng thay 30+ boilerplate, compact constructor=validation. Sealed=giới hạn subtypes, compiler exhaustive. instanceof pattern=no cast. switch pattern=exhaustive+guarded(when)+record pattern destructure. Text Block: indent-stripped, .formatted(). Switch expression: value+arrow(no fallthrough)+yield. sealed Result<T>=functional error handling. |
+| 2026-03-30 | 10.2 MavenAdvancedDemo | Lifecycle: 21 phases, key=compile/test/package/verify/install/deploy. Surefire(unit *Test) vs Failsafe(integration *IT, bound-to verify). Multi-module: dependencyManagement(declare) vs dependencies(use), reactor -pl/-am/-amd. BOM import scope=pom. Nearest-wins conflict: mvn dependency:tree+exclusions. Profile -P flag: dev/staging/prod/ci. CI: mvnw wrapper+MAVEN_OPTS+~/.m2 cache+settings.xml. Anti-pattern: SNAPSHOT in release, no version range, maven-shade duplicate class. |
+| 2026-03-30 | 10.3 GraalVMDemo | Native Image=AOT→fast startup(18ms)+low memory(28MB), no JIT=lower peak perf. Closed-World: tất cả code biết tại build time. Points-to Analysis loại dead code. Substrate VM=minimal runtime embedded vào binary. Tracing Agent tự generate reflect/proxy/resource configs. PGO 3-step: instrument→profile→optimize, +30-50% throughput. Truffle=zero-overhead polyglot (Python/JS/Ruby trong JVM). Config files: reflect-config.json, proxy-config.json, resource-config.json. Spring Boot 3/Quarkus/Micronaut đều có native support. Dùng native cho serverless/CLI/multi-instance microservices; JVM cho long-running peak throughput. |
 
 ---
 
 ## Bài tiếp theo được đề xuất
 
-**→ Bài 8.2: `TestContainersDemo.java`**
-- TestContainers: spin up real Docker containers in tests
-- PostgreSQL, Redis, Kafka containers trong integration test
-- @Container + @DynamicPropertySource (Spring integration)
-- Singleton container pattern (share across test class)
-- Network, wait strategies, custom images
+## 🏆 LỘ TRÌNH HOÀN THÀNH — 41/41 BÀI
+
+Bạn đã hoàn thành toàn bộ lộ trình học Java nâng cao dành cho Solution Architect.
+
+**Tiếp theo có thể:**
+- Áp dụng vào dự án thực tế với các pattern đã học
+- Contribute open source (Spring, Quarkus, GraalVM)
+- Đi sâu vào một domain: distributed systems, ML serving, real-time streaming
+- Lấy chứng chỉ: Oracle Java SE, Spring Professional, AWS/GCP architect
 
 ---
 
