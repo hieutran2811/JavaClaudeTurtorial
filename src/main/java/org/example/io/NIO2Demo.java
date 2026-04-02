@@ -396,7 +396,7 @@ public class NIO2Demo {
             Files.writeString(tree.resolve("src/test/java/com/example/" + f),
                 "// " + f, StandardCharsets.UTF_8);
         for (String f : classFiles)
-            Files.write(tree.resolve("target/classes/" + f), new byte[]{0xCA, (byte)0xFE});
+            Files.write(tree.resolve("target/classes/" + f), new byte[]{(byte)0xCA, (byte)0xFE});
 
         // Files.walk — depth-first traversal
         System.out.println("  [Files.walk — full tree]");

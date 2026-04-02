@@ -854,8 +854,9 @@ public class ResilienceDemo {
         svc.setFailRate(0);
         int ok = 0;
         for (int i = 0; i < 5; i++) {
+            final int idx = i;
             try {
-                client.call(() -> svc.call("pay-" + i));
+                client.call(() -> svc.call("pay-" + idx));
                 ok++;
             } catch (Exception e) {
                 System.out.println("  Error: " + e.getMessage());

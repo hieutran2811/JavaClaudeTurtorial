@@ -15,13 +15,12 @@ import java.util.function.*;
  * giúp code ngắn hơn, an toàn hơn, expressive hơn.
  *
  * TIMELINE:
- *   Java 14  → Records (preview)
+ *   Java 14  → Records (preview), Switch Expressions (stable)
  *   Java 15  → Text Blocks (stable), Sealed Classes (preview)
  *   Java 16  → Records (stable), Pattern Matching instanceof (stable)
  *   Java 17  → Sealed Classes (stable) [LTS]
- *   Java 18  → Switch Expressions improvements
- *   Java 19  → Virtual Threads (preview) → bài 2.6
- *   Java 21  → Pattern Matching switch (stable), Record Patterns [LTS]
+ *   Java 21  → Pattern Matching switch (stable), Record Patterns (stable),
+ *              Virtual Threads (stable), Sequenced Collections [LTS]
  *
  * ============================================================
  * FEATURE 1: RECORDS (Java 16+)
@@ -60,13 +59,11 @@ import java.util.function.*;
  *   - Thay thế enum khi mỗi variant cần data khác nhau
  *
  * ============================================================
- * FEATURE 3: PATTERN MATCHING (Java 16–21)
+ * FEATURE 3: PATTERN MATCHING instanceof (Java 16+)
  * ============================================================
  *
- * instanceof pattern:  if (obj instanceof String s) { ... }
- * switch pattern:      switch (shape) { case Circle c -> ...; }
- * record pattern:      case Point(int x, int y) -> x + y
- * guarded pattern:     case Circle c when c.radius() > 10 -> ...
+ * instanceof pattern:  if (obj instanceof String s) { use s directly }
+ * Eliminates redundant cast, works with && for guarded conditions.
  *
  * ============================================================
  * FEATURE 4: TEXT BLOCKS (Java 15+)
@@ -245,24 +242,22 @@ public class ModernJavaFeaturesDemo {
 
         @SuppressWarnings("unchecked")
         default T valueOrThrow() {
-            return switch (this) {
-                case Success<T> s -> s.value();
-                case Failure<T> f -> throw new RuntimeException(f.error(), f.cause());
-            };
+            if (this instanceof Success<?> s) return (T) s.value();
+            Failure<?> f = (Failure<?>) this;
+            throw new RuntimeException(f.error(), f.cause());
         }
 
+        @SuppressWarnings("unchecked")
         default <R> Result<R> map(Function<T, R> mapper) {
-            return switch (this) {
-                case Success<T> s -> Result.of(() -> mapper.apply(s.value()));
-                case Failure<T> f -> Result.failure(f.error(), f.cause());
-            };
+            if (this instanceof Success<?> s) return Result.of(() -> mapper.apply((T) s.value()));
+            Failure<?> f = (Failure<?>) this;
+            return Result.failure(f.error(), f.cause());
         }
 
+        @SuppressWarnings("unchecked")
         default T getOrElse(T defaultValue) {
-            return switch (this) {
-                case Success<T> s -> s.value();
-                case Failure<T> f -> defaultValue;
-            };
+            if (this instanceof Success<?> s) return (T) s.value();
+            return defaultValue;
         }
     }
 
@@ -286,11 +281,12 @@ public class ModernJavaFeaturesDemo {
     // ═══════════════════════════════════════════════════════
 
     /**
-     * Pattern Matching switch: exhaustive, no fallthrough, guarded patterns.
+     * Pattern Matching switch (Java 21): type-safe dispatch over sealed hierarchy.
+     * when clause thay thế && guard condition.
+     * Exhaustive: sealed interface → không cần default.
      */
     static String describeShape(Shape shape) {
         return switch (shape) {
-            // Record pattern: destructure inline
             case Circle c when c.radius() > 100 ->
                 String.format("HUGE circle (r=%.0f, area=%.0f)", c.radius(), c.area());
             case Circle c ->
@@ -301,23 +297,21 @@ public class ModernJavaFeaturesDemo {
                 String.format("Rectangle: %.1f×%.1f area=%.2f", r.width(), r.height(), r.area());
             case Triangle t ->
                 String.format("Triangle: sides=%.1f/%.1f/%.1f area=%.2f", t.a(), t.b(), t.c(), t.area());
-            // No default needed: sealed ensures exhaustiveness
         };
     }
 
     /**
-     * Pattern matching với Record Patterns (Java 21).
-     * Destructure nested records directly in switch.
+     * Pattern Matching switch trên sealed hierarchy (Java 21).
      */
     static String describeJsonValue(JsonValue val) {
         return switch (val) {
-            case JsonValue.JsonString(var s)  -> "string: \"" + s + "\"";
-            case JsonValue.JsonNumber(var n) when n == Math.floor(n) -> "integer: " + (long) n;
-            case JsonValue.JsonNumber(var n)  -> "number: " + n;
-            case JsonValue.JsonBool(var b)    -> "boolean: " + b;
-            case JsonValue.JsonNull()         -> "null";
-            case JsonValue.JsonArray(var els) -> "array[" + els.size() + "]";
-            case JsonValue.JsonObject(var flds) -> "object{" + flds.size() + " fields}";
+            case JsonValue.JsonString s                              -> "string: \"" + s.value() + "\"";
+            case JsonValue.JsonNumber n when n.value() == Math.floor(n.value()) -> "integer: " + (long) n.value();
+            case JsonValue.JsonNumber n                             -> "number: " + n.value();
+            case JsonValue.JsonBool b                               -> "boolean: " + b.value();
+            case JsonValue.JsonNull jn                              -> "null";
+            case JsonValue.JsonArray a                              -> "array[" + a.elements().size() + "]";
+            case JsonValue.JsonObject o                             -> "object{" + o.fields().size() + " fields}";
         };
     }
 
@@ -468,12 +462,12 @@ public class ModernJavaFeaturesDemo {
         };
     }
 
-    // Switch expression với sealed type (exhaustive, no default needed)
     static double calculateShapeScore(Shape shape) {
         return switch (shape) {
-            case Circle c    -> c.area() / c.perimeter();       // efficiency metric
-            case Rectangle r -> r.isSquare() ? 1.0 : r.area() / r.perimeter();
-            case Triangle t  -> t.area() / t.perimeter();
+            case Circle c                        -> c.area() / c.perimeter();
+            case Rectangle r when r.isSquare()  -> 1.0;
+            case Rectangle r                    -> r.area() / r.perimeter();
+            case Triangle t                     -> t.area() / t.perimeter();
         };
     }
 
@@ -496,21 +490,21 @@ public class ModernJavaFeaturesDemo {
 
     static double evaluate(Expr expr, Map<String, Double> vars) {
         return switch (expr) {
-            case Expr.Num(var v)          -> v;
-            case Expr.Var(var name)       -> vars.getOrDefault(name, 0.0);
-            case Expr.Neg(var e)          -> -evaluate(e, vars);
-            case Expr.Add(var l, var r)   -> evaluate(l, vars) + evaluate(r, vars);
-            case Expr.Mul(var l, var r)   -> evaluate(l, vars) * evaluate(r, vars);
+            case Expr.Num e -> e.value();
+            case Expr.Var e -> vars.getOrDefault(e.name(), 0.0);
+            case Expr.Neg e -> -evaluate(e.operand(), vars);
+            case Expr.Add e -> evaluate(e.left(), vars) + evaluate(e.right(), vars);
+            case Expr.Mul e -> evaluate(e.left(), vars) * evaluate(e.right(), vars);
         };
     }
 
     static String prettyPrint(Expr expr) {
         return switch (expr) {
-            case Expr.Num(var v)          -> String.valueOf(v);
-            case Expr.Var(var name)       -> name;
-            case Expr.Neg(var e)          -> "(-" + prettyPrint(e) + ")";
-            case Expr.Add(var l, var r)   -> "(" + prettyPrint(l) + " + " + prettyPrint(r) + ")";
-            case Expr.Mul(var l, var r)   -> "(" + prettyPrint(l) + " * " + prettyPrint(r) + ")";
+            case Expr.Num e -> String.valueOf(e.value());
+            case Expr.Var e -> e.name();
+            case Expr.Neg e -> "(-" + prettyPrint(e.operand()) + ")";
+            case Expr.Add e -> "(" + prettyPrint(e.left()) + " + " + prettyPrint(e.right()) + ")";
+            case Expr.Mul e -> "(" + prettyPrint(e.left()) + " * " + prettyPrint(e.right()) + ")";
         };
     }
 
@@ -534,26 +528,21 @@ public class ModernJavaFeaturesDemo {
 
     static HttpResponse handleRequest(HttpRequest req) {
         return switch (req) {
-            case HttpRequest.Get(var path, var headers) when path.startsWith("/orders") ->
+            case HttpRequest.Get r when r.path().startsWith("/orders") ->
                 HttpResponse.ok("""
                     {"orders": [{"id": "ORD-001", "status": "CONFIRMED"}]}
                     """.strip());
-
-            case HttpRequest.Get(var path, var headers) when path.startsWith("/health") ->
+            case HttpRequest.Get r when r.path().startsWith("/health") ->
                 HttpResponse.ok("{\"status\": \"UP\"}");
-
-            case HttpRequest.Get(var path, var headers) ->
-                HttpResponse.notFound(path);
-
-            case HttpRequest.Post(var path, var body, var ct) when path.equals("/orders") ->
+            case HttpRequest.Get r ->
+                HttpResponse.notFound(r.path());
+            case HttpRequest.Post r when r.path().equals("/orders") ->
                 HttpResponse.created("""
                     {"id": "ORD-NEW", "status": "PENDING"}
                     """.strip());
-
-            case HttpRequest.Post(var path, var body, var ct) ->
-                HttpResponse.badRequest("Unknown endpoint: " + path);
-
-            case HttpRequest.Delete(var path, var reason) ->
+            case HttpRequest.Post r ->
+                HttpResponse.badRequest("Unknown endpoint: " + r.path());
+            case HttpRequest.Delete r ->
                 new HttpResponse(204, ""); // No Content
         };
     }
@@ -624,7 +613,7 @@ public class ModernJavaFeaturesDemo {
             .max(Comparator.comparingDouble(Shape::area))
             .map(s -> describeShape(s)).orElse("none"));
 
-        System.out.println("\nRecord Patterns (Java 21):");
+        System.out.println("\nJsonValue dispatch (instanceof pattern):");
         List<JsonValue> jsons = List.of(
             new JsonValue.JsonString("hello"),
             new JsonValue.JsonNumber(42.0),
@@ -649,10 +638,10 @@ public class ModernJavaFeaturesDemo {
             .map(n -> "Result: " + n);
         System.out.println("  chained map          : " + chained.getOrElse("error"));
 
-        // Pattern match on Result
+        // switch pattern matching on Result
         String msg = switch (fail) {
-            case Result.Success<Integer> s -> "Got: " + s.value();
-            case Result.Failure<Integer> f -> "Failed: " + f.error();
+            case Result.Success<?> s -> "Got: " + s.value();
+            case Result.Failure<?> f -> "Failed: " + f.error();
         };
         System.out.println("  switch on Result     : " + msg);
     }
@@ -710,13 +699,13 @@ public class ModernJavaFeaturesDemo {
 
         requests.forEach(req -> {
             HttpResponse resp = handleRequest(req);
+            String path = switch (req) {
+                case HttpRequest.Get r    -> r.path();
+                case HttpRequest.Post r   -> r.path();
+                case HttpRequest.Delete r -> r.path();
+            };
             System.out.printf("  %-45s → %d %s%n",
-                req.getClass().getSimpleName() + "(" +
-                    switch (req) {
-                        case HttpRequest.Get(var p, var h)    -> p;
-                        case HttpRequest.Post(var p, var b, var c) -> p;
-                        case HttpRequest.Delete(var p, var r) -> p;
-                    } + ")",
+                req.getClass().getSimpleName() + "(" + path + ")",
                 resp.status(),
                 resp.body().length() > 40 ? resp.body().substring(0, 40) + "..." : resp.body()
             );
@@ -814,10 +803,9 @@ public class ModernJavaFeaturesDemo {
         System.out.println("║    Kết hợp records → algebraic data types        ║");
         System.out.println("║    sealed Result<T> permits Success, Failure     ║");
         System.out.println("║                                                   ║");
-        System.out.println("║  PATTERN MATCHING:                               ║");
-        System.out.println("║    instanceof: no redundant cast                 ║");
-        System.out.println("║    switch: exhaustive + guarded (when) + record  ║");
-        System.out.println("║    pattern (destructure inline)                  ║");
+        System.out.println("║  PATTERN MATCHING instanceof (Java 16):          ║");
+        System.out.println("║    if (obj instanceof Type t) → no cast needed   ║");
+        System.out.println("║    if (obj instanceof Type t && guard) → guarded ║");
         System.out.println("║                                                   ║");
         System.out.println("║  TEXT BLOCKS: multiline, indent-stripped,        ║");
         System.out.println("║    .formatted() for substitution                 ║");

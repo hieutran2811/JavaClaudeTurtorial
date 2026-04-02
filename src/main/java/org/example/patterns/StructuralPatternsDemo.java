@@ -360,7 +360,7 @@ public class StructuralPatternsDemo {
 
         // Two-way adapter — convert giữa 2 format
         System.out.println("\n  Two-way Adapter: JSON ↔ XML:");
-        DataFormat jsonFormat = new JsonFormat();
+        JsonFormat jsonFormat = new JsonFormat();
         DataFormat xmlAdapter = new JsonToXmlAdapter(jsonFormat);
 
         String json = "{\"name\":\"Alice\",\"age\":30}";

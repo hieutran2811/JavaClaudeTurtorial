@@ -2,7 +2,15 @@
   "permissions": {
     "allow": [
       "Bash(mvn compile:*)",
-      "Bash(java:*)"
+      "Bash(java:*)",
+      "Bash(claude auth:*)",
+      "Bash(javac -version)",
+      "Bash(where java:*)",
+      "Read(//c/Program Files/Java/\" 2>/dev/null || ls C:/**)",
+      "Read(//c/Program Files/Java//**)",
+      "Bash(mvn -version)",
+      "Bash(JAVA_HOME=\"/c/Program Files/Java/jdk-21.0.10\" mvn compile -q)",
+      "Bash(JAVA_HOME=\"/c/Program Files/Java/jdk-21.0.10\" mvn compile)"
     ]
   }
 }

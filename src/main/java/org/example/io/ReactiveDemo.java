@@ -1,5 +1,6 @@
 package org.example.io;
 
+import org.reactivestreams.Subscription;
 import reactor.core.publisher.*;
 import reactor.core.scheduler.*;
 import reactor.util.retry.*;
@@ -575,7 +576,7 @@ public class ReactiveDemo {
                 int received = 0;
 
                 @Override
-                protected void hookOnSubscribe(reactor.core.publisher.Subscription subscription) {
+                protected void hookOnSubscribe(Subscription subscription) {
                     System.out.println("    Subscribed — requesting 2 items initially");
                     request(2); // pull first 2 items
                 }

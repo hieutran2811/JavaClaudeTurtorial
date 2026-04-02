@@ -252,6 +252,8 @@ public class ObservabilityDemo {
         String spanId()    { return spanId; }
         String parentSpanId() { return parentSpanId; }
         String name()      { return name; }
+        String service()   { return service; }
+        String status()    { return status; }
 
         @Override
         public void close() {

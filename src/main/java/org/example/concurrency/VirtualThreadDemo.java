@@ -1,9 +1,8 @@
 package org.example.concurrency;
 
-import java.time.Duration;
-import java.util.*;
 import java.util.concurrent.*;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.IntStream;
 
 /**
@@ -20,9 +19,6 @@ import java.util.stream.IntStream;
  *   6. Virtual thread KHÔNG phải silver bullet — khi nào KHÔNG nên dùng
  *
  * YÊU CẦU: Java 21+
- *   Nếu dùng Java 17: các API Virtual Thread chưa có,
- *   chỉ chạy được demo 1-2. Demo 3-5 cần --enable-preview (Java 19/20)
- *   hoặc Java 21 GA.
  *
  * CHẠY: mvn compile exec:java -Dexec.mainClass="org.example.concurrency.VirtualThreadDemo"
  * ============================================================
@@ -42,6 +38,30 @@ public class VirtualThreadDemo {
 
         System.out.println("\n=== KẾT THÚC BÀI 2.6 — MODULE 2 HOÀN THÀNH ===");
     }
+
+    // ================================================================
+    // Helper: chạy N task đồng thời, trả về thời gian ms
+    // ================================================================
+
+    /**
+     * Chạy {@code count} task trên {@code exec}, mỗi task là {@code task},
+     * đợi tất cả hoàn thành và trả về thời gian tổng (ms).
+     */
+    static long runConcurrent(ExecutorService exec, int count, CheckedRunnable task) throws Exception {
+        CountDownLatch latch = new CountDownLatch(count);
+        long start = System.currentTimeMillis();
+        for (int i = 0; i < count; i++) {
+            exec.submit(() -> {
+                try { task.run(); } catch (Exception e) { Thread.currentThread().interrupt(); }
+                finally { latch.countDown(); }
+            });
+        }
+        latch.await(120, TimeUnit.SECONDS);
+        return System.currentTimeMillis() - start;
+    }
+
+    @FunctionalInterface
+    interface CheckedRunnable { void run() throws Exception; }
 
     // ================================================================
     // DEMO 1: Platform Thread vs Virtual Thread — Cấu trúc khác nhau
@@ -77,63 +97,47 @@ public class VirtualThreadDemo {
         System.out.println("--- DEMO 1: Platform Thread vs Virtual Thread ---");
 
         // Platform thread — OS thread thực sự
-        Thread platformThread = new Thread(() -> {
+        Thread platformThread = new Thread(() ->
             System.out.println("  Platform thread: " + Thread.currentThread()
-                    + " | virtual=" + Thread.currentThread().isVirtual());
-        });
+                    + " | virtual=" + Thread.currentThread().isVirtual()));
         platformThread.start();
         platformThread.join();
 
         // Virtual thread — lightweight, JVM-managed
         Thread virtualThread = Thread.ofVirtual()
             .name("my-virtual-thread")
-            .start(() -> {
+            .start(() ->
                 System.out.println("  Virtual thread:  " + Thread.currentThread()
-                        + " | virtual=" + Thread.currentThread().isVirtual());
-            });
+                        + " | virtual=" + Thread.currentThread().isVirtual()));
         virtualThread.join();
 
         // So sánh chi phí tạo thread
-        int COUNT = 10_000;
+        int count = 10_000;
 
-        long start = System.currentTimeMillis();
-        List<Thread> platformThreads = new ArrayList<>();
-        for (int i = 0; i < COUNT; i++) {
-            Thread t = new Thread(() -> { /* no-op */ });
-            platformThreads.add(t);
-            t.start();
+        try (ExecutorService ptPool = Executors.newCachedThreadPool()) {
+            long platformTime = runConcurrent(ptPool, count, () -> {});
+            try (ExecutorService vtPool = Executors.newVirtualThreadPerTaskExecutor()) {
+                long virtualTime = runConcurrent(vtPool, count, () -> {});
+                System.out.println("  Tạo " + count + " platform threads: " + platformTime + "ms");
+                System.out.println("  Tạo " + count + " virtual threads:  " + virtualTime + "ms");
+                System.out.println("  Virtual thread nhanh hơn ~" + (platformTime / Math.max(virtualTime, 1)) + "x\n");
+            }
         }
-        for (Thread t : platformThreads) t.join();
-        long platformTime = System.currentTimeMillis() - start;
-
-        start = System.currentTimeMillis();
-        List<Thread> virtualThreads = new ArrayList<>();
-        for (int i = 0; i < COUNT; i++) {
-            Thread t = Thread.ofVirtual().start(() -> { /* no-op */ });
-            virtualThreads.add(t);
-        }
-        for (Thread t : virtualThreads) t.join();
-        long virtualTime = System.currentTimeMillis() - start;
-
-        System.out.println("  Tạo " + COUNT + " platform threads: " + platformTime + "ms");
-        System.out.println("  Tạo " + COUNT + " virtual threads:  " + virtualTime + "ms");
-        System.out.println("  Virtual thread nhanh hơn ~" + (platformTime / Math.max(virtualTime, 1)) + "x\n");
     }
 
     // ================================================================
-    // DEMO 2: Massive Concurrency — 100.000 concurrent "requests"
+    // DEMO 2: Massive Concurrency — 10.000 concurrent "requests"
     // ================================================================
 
     /**
-     * Bài toán kinh điển: Server phải xử lý 100.000 request đồng thời,
+     * Bài toán kinh điển: Server phải xử lý 10.000 request đồng thời,
      * mỗi request mất 100ms chờ I/O (DB, HTTP call...).
      *
-     * Với Platform Thread:
-     *   100.000 thread × 1MB stack = 100GB RAM → IMPOSSIBLE
-     *   ThreadPool 500 thread: 100.000 / 500 = 200 batch × 100ms = 20 giây
+     * Với Platform Thread pool (n threads):
+     *   10.000 / n = nhiều batch × 100ms → tổng thời gian rất lớn
      *
      * Với Virtual Thread:
-     *   100.000 virtual thread × ~200 bytes = ~20MB → trivial
+     *   10.000 virtual thread × ~200 bytes = ~2MB → trivial
      *   Tất cả "chờ" I/O đồng thời, JVM tự unmount → platform thread free
      *   → Thời gian xấp xỉ 100ms (cộng scheduling overhead)
      *
@@ -142,43 +146,19 @@ public class VirtualThreadDemo {
     static void demo2_MassiveConcurrency() throws Exception {
         System.out.println("--- DEMO 2: Massive Concurrency ---");
 
-        int REQUESTS = 10_000; // Dùng 10k để demo nhanh (thực tế có thể dùng 100k+)
-        int SIMULATED_IO_MS = 100;
+        int requests   = 10_000;
+        int ioDelayMs  = 100;
+        int poolSize   = Runtime.getRuntime().availableProcessors() * 2;
 
-        // Platform thread pool — giới hạn bởi thread count
-        int poolSize = Runtime.getRuntime().availableProcessors() * 2;
-        ExecutorService platformPool = Executors.newFixedThreadPool(poolSize);
-
-        long start = System.currentTimeMillis();
-        CountDownLatch latch1 = new CountDownLatch(REQUESTS);
-        for (int i = 0; i < REQUESTS; i++) {
-            platformPool.submit(() -> {
-                try { Thread.sleep(SIMULATED_IO_MS); }
-                catch (InterruptedException e) { Thread.currentThread().interrupt(); }
-                latch1.countDown();
-            });
+        long platformTime, virtualTime;
+        try (ExecutorService ptPool = Executors.newFixedThreadPool(poolSize)) {
+            platformTime = runConcurrent(ptPool, requests, () -> Thread.sleep(ioDelayMs));
         }
-        latch1.await(120, TimeUnit.SECONDS);
-        platformPool.shutdown();
-        long platformTime = System.currentTimeMillis() - start;
-
-        // Virtual thread executor — 1 virtual thread per task, không giới hạn
-        ExecutorService virtualPool = Executors.newVirtualThreadPerTaskExecutor();
-
-        start = System.currentTimeMillis();
-        CountDownLatch latch2 = new CountDownLatch(REQUESTS);
-        for (int i = 0; i < REQUESTS; i++) {
-            virtualPool.submit(() -> {
-                try { Thread.sleep(SIMULATED_IO_MS); }  // Blocking OK! JVM tự unmount
-                catch (InterruptedException e) { Thread.currentThread().interrupt(); }
-                latch2.countDown();
-            });
+        try (ExecutorService vtPool = Executors.newVirtualThreadPerTaskExecutor()) {
+            virtualTime = runConcurrent(vtPool, requests, () -> Thread.sleep(ioDelayMs));
         }
-        latch2.await(30, TimeUnit.SECONDS);
-        virtualPool.shutdown();
-        long virtualTime = System.currentTimeMillis() - start;
 
-        System.out.println("  " + REQUESTS + " requests, mỗi request I/O " + SIMULATED_IO_MS + "ms:");
+        System.out.println("  " + requests + " requests, mỗi request I/O " + ioDelayMs + "ms:");
         System.out.println("  Platform pool (" + poolSize + " threads): " + platformTime + "ms");
         System.out.println("  Virtual thread pool:                  " + virtualTime + "ms");
         System.out.printf("  Virtual thread nhanh hơn: %.1fx%n%n", (double) platformTime / virtualTime);
@@ -204,9 +184,9 @@ public class VirtualThreadDemo {
     static void demo3_VirtualThreadAPIs() throws Exception {
         System.out.println("--- DEMO 3: Virtual Thread APIs ---");
 
-        // Cách 1: Thread.ofVirtual()
+        // Cách 1: Thread.ofVirtual() với auto-increment name
         Thread t1 = Thread.ofVirtual()
-            .name("vt-worker-", 1)   // Auto-increment name: vt-worker-1, vt-worker-2...
+            .name("vt-worker-", 1)
             .start(() -> System.out.println("  [1] Thread.ofVirtual(): " + Thread.currentThread().getName()));
         t1.join();
 
@@ -215,7 +195,7 @@ public class VirtualThreadDemo {
             System.out.println("  [2] startVirtualThread: " + Thread.currentThread().getName()));
         t2.join();
 
-        // Cách 3: ExecutorService — tương thích với code cũ dùng ExecutorService
+        // Cách 3: ExecutorService — tương thích với code cũ
         try (ExecutorService exec = Executors.newVirtualThreadPerTaskExecutor()) {
             Future<String> f = exec.submit(() -> {
                 Thread.sleep(50);
@@ -228,9 +208,9 @@ public class VirtualThreadDemo {
         ThreadFactory factory = Thread.ofVirtual().name("app-", 0).factory();
         Thread t4 = factory.newThread(() ->
             System.out.println("  [4] ThreadFactory: " + Thread.currentThread().getName()));
-        t4.start(); t4.join();
+        t4.start();
+        t4.join();
 
-        // Virtual thread là daemon
         Thread vt = Thread.ofVirtual().unstarted(() -> {});
         System.out.println("  Virtual thread isDaemon: " + vt.isDaemon() + " (luôn true)");
         System.out.println("  Virtual thread isVirtual: " + vt.isVirtual() + "\n");
@@ -258,32 +238,25 @@ public class VirtualThreadDemo {
      *   StructuredTaskScope: subtask gắn với scope, tự cleanup khi thoát scope
      *
      * NOTE: Java 21 vẫn là Preview API — cần --enable-preview để compile.
-     *   Java 23+ sẽ finalize. Demo này minh hoạ concept, chạy được với Java 21+preview.
+     *   Java 23+ sẽ finalize. Demo này dùng CompletableFuture minh hoạ concept.
      */
     static void demo4_StructuredConcurrency() throws Exception {
         System.out.println("--- DEMO 4: Structured Concurrency ---");
 
-        // Pattern tương đương StructuredTaskScope với Java 21 stable API
-        // (Dùng CompletableFuture để minh hoạ concept — behavior giống nhau)
-
-        System.out.println("  Concept: StructuredTaskScope.ShutdownOnFailure");
-        System.out.println("  (Minh hoạ bằng CompletableFuture — concept tương đương)");
-
         // ShutdownOnFailure pattern: cần TẤT CẢ task thành công
-        // Nếu 1 fail → cancel các task còn lại
+        System.out.println("  Concept: StructuredTaskScope.ShutdownOnFailure");
         try (ExecutorService exec = Executors.newVirtualThreadPerTaskExecutor()) {
             long start = System.currentTimeMillis();
 
-            Future<String> userFuture    = exec.submit(() -> { Thread.sleep(80);  return "Alice"; });
-            Future<Integer> orderFuture  = exec.submit(() -> { Thread.sleep(120); return 5; });
+            Future<String>  userFuture    = exec.submit(() -> { Thread.sleep(80);  return "Alice"; });
+            Future<Integer> orderFuture   = exec.submit(() -> { Thread.sleep(120); return 5; });
             Future<Double>  balanceFuture = exec.submit(() -> { Thread.sleep(60);  return 1500.0; });
 
             try {
                 String user    = userFuture.get(2, TimeUnit.SECONDS);
-                int orders     = orderFuture.get(2, TimeUnit.SECONDS);
+                int    orders  = orderFuture.get(2, TimeUnit.SECONDS);
                 double balance = balanceFuture.get(2, TimeUnit.SECONDS);
-
-                System.out.printf("  ShutdownOnFailure result: user=%s, orders=%d, balance=%.1f (%dms)%n",
+                System.out.printf("  ShutdownOnFailure: user=%s, orders=%d, balance=%.1f (%dms)%n",
                         user, orders, balance, System.currentTimeMillis() - start);
             } catch (Exception e) {
                 userFuture.cancel(true);
@@ -293,27 +266,29 @@ public class VirtualThreadDemo {
             }
         }
 
-        // ShutdownOnSuccess pattern: chỉ cần 1 task thành công (hedged request)
+        // ShutdownOnSuccess pattern: chỉ cần 1 task nhanh nhất (hedged request)
         System.out.println("  Concept: StructuredTaskScope.ShutdownOnSuccess (hedged request)");
         try (ExecutorService exec = Executors.newVirtualThreadPerTaskExecutor()) {
             long start = System.currentTimeMillis();
 
+            AtomicReference<String> result = new AtomicReference<>();
+            CountDownLatch done = new CountDownLatch(1);
+
             // Gửi đến 3 replica — lấy replica nào trả về trước
-            Future<String> replica1 = exec.submit(() -> { Thread.sleep(300); return "replica-1"; });
-            Future<String> replica2 = exec.submit(() -> { Thread.sleep(80);  return "replica-2"; });
-            Future<String> replica3 = exec.submit(() -> { Thread.sleep(200); return "replica-3"; });
+            for (int[] cfg : new int[][]{{300, 1}, {80, 2}, {200, 3}}) {
+                int delay = cfg[0], id = cfg[1];
+                exec.submit(() -> {
+                    try {
+                        Thread.sleep(delay);
+                        result.compareAndSet(null, "replica-" + id);
+                        done.countDown();
+                    } catch (InterruptedException ignored) {}
+                });
+            }
 
-            // anyOf tương đương ShutdownOnSuccess
-            @SuppressWarnings("unchecked")
-            CompletableFuture<String>[] cfs = new CompletableFuture[]{
-                CompletableFuture.supplyAsync(() -> { try { return replica1.get(); } catch (Exception e) { throw new RuntimeException(e); } }),
-                CompletableFuture.supplyAsync(() -> { try { return replica2.get(); } catch (Exception e) { throw new RuntimeException(e); } }),
-                CompletableFuture.supplyAsync(() -> { try { return replica3.get(); } catch (Exception e) { throw new RuntimeException(e); } })
-            };
-            String winner = (String) CompletableFuture.anyOf(cfs).get();
-            replica1.cancel(true); replica2.cancel(true); replica3.cancel(true);
-
-            System.out.println("  ShutdownOnSuccess: '" + winner + "' về trước ("
+            done.await(5, TimeUnit.SECONDS);
+            exec.shutdownNow(); // cancel các task còn lại
+            System.out.println("  ShutdownOnSuccess: '" + result.get() + "' về trước ("
                     + (System.currentTimeMillis() - start) + "ms)\n");
         }
     }
@@ -351,61 +326,32 @@ public class VirtualThreadDemo {
     static void demo5_PinningAndLimitations() throws Exception {
         System.out.println("--- DEMO 5: Pinning & Limitations ---");
 
-        int TASKS = 200;
-        int SLEEP_MS = 50;
+        int tasks   = 200;
+        int sleepMs = 50;
 
-        // Không pin: Thread.sleep() trong virtual thread → unmount bình thường
-        ExecutorService vtPool = Executors.newVirtualThreadPerTaskExecutor();
-        long start = System.currentTimeMillis();
-        CountDownLatch latch1 = new CountDownLatch(TASKS);
-        for (int i = 0; i < TASKS; i++) {
-            vtPool.submit(() -> {
-                try { Thread.sleep(SLEEP_MS); } // Thread.sleep → unmount, NO PIN
-                catch (InterruptedException e) { Thread.currentThread().interrupt(); }
-                latch1.countDown();
+        final Object     lock          = new Object();
+        final ReentrantLock reentrantLock = new ReentrantLock();
+
+        long noPin, withPin, lockFixed;
+
+        try (ExecutorService vtPool = Executors.newVirtualThreadPerTaskExecutor()) {
+            // Thread.sleep() trong virtual thread → unmount bình thường, NO PIN
+            noPin = runConcurrent(vtPool, tasks, () -> Thread.sleep(sleepMs));
+
+            // synchronized + sleep → PIN trong Java 21
+            withPin = runConcurrent(vtPool, tasks, () -> {
+                synchronized (lock) { Thread.sleep(sleepMs); }
             });
-        }
-        latch1.await(30, TimeUnit.SECONDS);
-        vtPool.shutdown();
-        long noPin = System.currentTimeMillis() - start;
 
-        // Mô phỏng pin: synchronized + sleep (trong Java 21 sẽ pin)
-        Object lock = new Object();
-        vtPool = Executors.newVirtualThreadPerTaskExecutor();
-        start = System.currentTimeMillis();
-        CountDownLatch latch2 = new CountDownLatch(TASKS);
-        for (int i = 0; i < TASKS; i++) {
-            vtPool.submit(() -> {
-                synchronized (lock) {             // synchronized → PIN khi blocking bên trong
-                    try { Thread.sleep(SLEEP_MS); } // ← Thread bị pin trong suốt thời gian này
-                    catch (InterruptedException e) { Thread.currentThread().interrupt(); }
-                }
-                latch2.countDown();
-            });
-        }
-        latch2.await(30, TimeUnit.SECONDS);
-        vtPool.shutdown();
-        long withPin = System.currentTimeMillis() - start;
-
-        // Fix: dùng ReentrantLock thay synchronized
-        ReentrantLock reentrantLock = new ReentrantLock();
-        vtPool = Executors.newVirtualThreadPerTaskExecutor();
-        start = System.currentTimeMillis();
-        CountDownLatch latch3 = new CountDownLatch(TASKS);
-        for (int i = 0; i < TASKS; i++) {
-            vtPool.submit(() -> {
+            // ReentrantLock + sleep → KHÔNG pin → unmount được
+            lockFixed = runConcurrent(vtPool, tasks, () -> {
                 reentrantLock.lock();
-                try { Thread.sleep(SLEEP_MS); }   // ReentrantLock → KHÔNG pin → unmount được
-                catch (InterruptedException e) { Thread.currentThread().interrupt(); }
+                try { Thread.sleep(sleepMs); }
                 finally { reentrantLock.unlock(); }
-                latch3.countDown();
             });
         }
-        latch3.await(30, TimeUnit.SECONDS);
-        vtPool.shutdown();
-        long lockFixed = System.currentTimeMillis() - start;
 
-        System.out.println("  " + TASKS + " virtual threads, sleep " + SLEEP_MS + "ms mỗi task:");
+        System.out.println("  " + tasks + " virtual threads, sleep " + sleepMs + "ms mỗi task:");
         System.out.println("  Thread.sleep (no pin):    " + noPin    + "ms  ← baseline tốt");
         System.out.println("  synchronized + sleep PIN: " + withPin  + "ms  ← bị pin, chậm!");
         System.out.println("  ReentrantLock (no pin):   " + lockFixed + "ms  ← fix pin bằng Lock");
@@ -445,68 +391,30 @@ public class VirtualThreadDemo {
     static void demo6_WhenToUse() throws Exception {
         System.out.println("--- DEMO 6: CPU-bound vs IO-bound với Virtual Thread ---");
 
-        int TASKS = 200;
-
-        // IO-bound: virtual thread WINS
-        ExecutorService vtPool = Executors.newVirtualThreadPerTaskExecutor();
-        ExecutorService ptPool = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
-
-        long start = System.currentTimeMillis();
-        CountDownLatch latch1 = new CountDownLatch(TASKS);
-        for (int i = 0; i < TASKS; i++) {
-            vtPool.submit(() -> {
-                try { Thread.sleep(100); } catch (InterruptedException e) {}  // IO simulation
-                latch1.countDown();
-            });
-        }
-        latch1.await(30, TimeUnit.SECONDS);
-        long vtIO = System.currentTimeMillis() - start;
-
-        start = System.currentTimeMillis();
-        CountDownLatch latch2 = new CountDownLatch(TASKS);
-        for (int i = 0; i < TASKS; i++) {
-            ptPool.submit(() -> {
-                try { Thread.sleep(100); } catch (InterruptedException e) {}  // IO simulation
-                latch2.countDown();
-            });
-        }
-        latch2.await(30, TimeUnit.SECONDS);
-        long ptIO = System.currentTimeMillis() - start;
-
-        System.out.println("  IO-bound (" + TASKS + " tasks × sleep 100ms):");
-        System.out.println("  Virtual thread pool: " + vtIO + "ms  ← WINNER");
-        System.out.println("  Platform thread pool: " + ptIO + "ms");
-
-        // CPU-bound: virtual thread KHÔNG giúp được
+        int ioTasks  = 200;
         int cpuTasks = Runtime.getRuntime().availableProcessors() * 2;
 
-        start = System.currentTimeMillis();
-        CountDownLatch latch3 = new CountDownLatch(cpuTasks);
-        for (int i = 0; i < cpuTasks; i++) {
-            vtPool.submit(() -> {
-                long sum = IntStream.range(0, 1_000_000).asLongStream().sum(); // CPU work
-                latch3.countDown();
-            });
-        }
-        latch3.await(30, TimeUnit.SECONDS);
-        long vtCPU = System.currentTimeMillis() - start;
+        long vtIO, ptIO, vtCPU, ptCPU;
 
-        start = System.currentTimeMillis();
-        CountDownLatch latch4 = new CountDownLatch(cpuTasks);
-        for (int i = 0; i < cpuTasks; i++) {
-            ptPool.submit(() -> {
-                long sum = IntStream.range(0, 1_000_000).asLongStream().sum(); // CPU work
-                latch4.countDown();
-            });
+        try (ExecutorService vtPool = Executors.newVirtualThreadPerTaskExecutor();
+             ExecutorService ptPool = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors())) {
+
+            // IO-bound: virtual thread WINS
+            vtIO  = runConcurrent(vtPool, ioTasks,  () -> Thread.sleep(100));
+            ptIO  = runConcurrent(ptPool, ioTasks,  () -> Thread.sleep(100));
+
+            // CPU-bound: virtual thread KHÔNG giúp được
+            vtCPU = runConcurrent(vtPool, cpuTasks, () -> IntStream.range(0, 1_000_000).asLongStream().sum());
+            ptCPU = runConcurrent(ptPool, cpuTasks, () -> IntStream.range(0, 1_000_000).asLongStream().sum());
         }
-        latch4.await(30, TimeUnit.SECONDS);
-        long ptCPU = System.currentTimeMillis() - start;
+
+        System.out.println("  IO-bound (" + ioTasks + " tasks × sleep 100ms):");
+        System.out.println("  Virtual thread pool:  " + vtIO  + "ms  ← WINNER");
+        System.out.println("  Platform thread pool: " + ptIO  + "ms");
 
         System.out.println("\n  CPU-bound (" + cpuTasks + " tasks × sum 1M numbers):");
         System.out.println("  Virtual thread pool:  " + vtCPU + "ms");
         System.out.println("  Platform thread pool: " + ptCPU + "ms  ← tương đương (CPU không được giải phóng)");
-
-        vtPool.shutdown(); ptPool.shutdown();
 
         System.out.println();
         System.out.println("=== TỔNG KẾT MODULE 2 — CONCURRENCY & MULTITHREADING ===");

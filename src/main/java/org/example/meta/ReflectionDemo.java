@@ -1,6 +1,7 @@
 package org.example.meta;
 
 import java.lang.annotation.*;
+import java.lang.invoke.*;
 import java.lang.reflect.*;
 import java.util.*;
 import java.util.concurrent.*;
@@ -320,7 +321,9 @@ public class ReflectionDemo {
         MethodHandles.Lookup lookup = MethodHandles.lookup();
         MethodType type = MethodType.methodType(String.class, int.class);
         MethodHandle mh = lookup.findVirtual(UserService.class, "findById", type);
-        String mhResult = (String) mh.invoke(svc, 99);
+        String mhResult;
+        try { mhResult = (String) mh.invoke(svc, 99); }
+        catch (Throwable t) { throw new RuntimeException(t); }
         System.out.printf("    MethodHandle invoke: \"%s\"%n", mhResult);
         System.out.println("    MethodHandle: JIT-friendly (can inline), faster than Method.invoke");
     }
@@ -614,7 +617,8 @@ public class ReflectionDemo {
             }
         );
 
-        ((Repository<?, ?>) multiProxy).findById(1);
+        //noinspection unchecked
+        ((Repository<String, Integer>) multiProxy).findById(1);
         ((CacheAware) multiProxy).clearCache();
     }
 
@@ -773,11 +777,13 @@ public class ReflectionDemo {
         int MEASURE = 200_000;
 
         // Warm up JIT
-        for (int i = 0; i < WARMUP; i++) {
-            svc.findById(i);
-            method.invoke(svc, i);
-            mh.invoke(svc, i);
-        }
+        try {
+            for (int i = 0; i < WARMUP; i++) {
+                svc.findById(i);
+                method.invoke(svc, i);
+                mh.invoke(svc, i);
+            }
+        } catch (Throwable t) { throw new RuntimeException(t); }
 
         // Direct call
         long start = System.nanoTime();
@@ -790,8 +796,10 @@ public class ReflectionDemo {
         long reflectNs = (System.nanoTime() - start) / MEASURE;
 
         // MethodHandle.invoke
-        start = System.nanoTime();
-        for (int i = 0; i < MEASURE; i++) mh.invoke(svc, i);
+        try {
+            start = System.nanoTime();
+            for (int i = 0; i < MEASURE; i++) mh.invoke(svc, i);
+        } catch (Throwable t) { throw new RuntimeException(t); }
         long mhNs = (System.nanoTime() - start) / MEASURE;
 
         // getDeclaredMethod every time (anti-pattern)

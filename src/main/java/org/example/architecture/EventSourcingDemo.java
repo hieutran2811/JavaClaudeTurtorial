@@ -312,12 +312,12 @@ public class EventSourcingDemo {
                     this.balance   = BigDecimal.ZERO;
                     this.status    = Status.ACTIVE;
                 }
-                case MoneyDeposited e  -> this.balance = balance.add(e.amount());
-                case MoneyWithdrawn e  -> this.balance = balance.subtract(e.amount());
+                case MoneyDeposited e    -> this.balance = balance.add(e.amount());
+                case MoneyWithdrawn e    -> this.balance = balance.subtract(e.amount());
                 case TransferInitiated e -> this.balance = balance.subtract(e.amount());
                 case TransferCompleted e -> this.balance = balance.add(e.amount());
-                case AccountFrozen e   -> this.status = Status.FROZEN;
-                case AccountClosed e   -> this.status = Status.CLOSED;
+                case AccountFrozen e     -> this.status  = Status.FROZEN;
+                case AccountClosed e     -> this.status  = Status.CLOSED;
             }
             this.version++;
         }
@@ -331,6 +331,22 @@ public class EventSourcingDemo {
             List<DomainEvent> events = new ArrayList<>(pendingEvents);
             pendingEvents.clear();
             return events;
+        }
+
+        AccountSnapshot toSnapshot() {
+            return new AccountSnapshot(accountId, owner, currency, balance, status, version, Instant.now());
+        }
+
+        static BankAccount fromSnapshot(AccountSnapshot snap, List<DomainEvent> eventsSince) {
+            BankAccount acc = new BankAccount();
+            acc.accountId = snap.accountId();
+            acc.owner     = snap.owner();
+            acc.currency  = snap.currency();
+            acc.balance   = snap.balance();
+            acc.status    = snap.status();
+            acc.version   = snap.version();
+            eventsSince.forEach(acc::apply);
+            return acc;
         }
 
         private void requireStatus(Status required) {
@@ -387,28 +403,6 @@ public class EventSourcingDemo {
         }
     }
 
-    static AccountSnapshot takeSnapshot(BankAccount account) {
-        return new AccountSnapshot(
-            account.accountId(), account.owner(), account.currency(),
-            account.balance(), account.status(), account.version(), Instant.now()
-        );
-    }
-
-    static BankAccount restoreFromSnapshot(AccountSnapshot snap, List<DomainEvent> eventsSince) {
-        // Rebuild state = snapshot + events since snapshot
-        BankAccount acc = new BankAccount();
-        // Apply snapshot state directly (no replay)
-        acc.accountId = snap.accountId();
-        acc.owner     = snap.owner();
-        acc.currency  = snap.currency();
-        acc.balance   = snap.balance();
-        acc.status    = snap.status();
-        acc.version   = snap.version();
-        // Apply only recent events
-        eventsSince.forEach(acc::apply);
-        return acc;
-    }
-
     // ═══════════════════════════════════════════════════════
     // SECTION 5: CQRS — Read Models (Projections)
     // ═══════════════════════════════════════════════════════
@@ -444,51 +438,40 @@ public class EventSourcingDemo {
                     new AccountSummaryView(e.aggregateId(), e.owner(),
                         BigDecimal.ZERO, BankAccount.Status.ACTIVE, 0,
                         BigDecimal.ZERO, BigDecimal.ZERO, e.occurredAt()));
-
-                case MoneyDeposited e -> views.compute(e.aggregateId(), (id, v) ->
-                    v == null ? null : new AccountSummaryView(
-                        v.accountId(), v.owner(),
-                        v.balance().add(e.amount()), v.status(),
-                        v.totalTransactions() + 1,
-                        v.totalDeposited().add(e.amount()), v.totalWithdrawn(),
-                        e.occurredAt()));
-
-                case MoneyWithdrawn e -> views.compute(e.aggregateId(), (id, v) ->
-                    v == null ? null : new AccountSummaryView(
-                        v.accountId(), v.owner(),
-                        v.balance().subtract(e.amount()), v.status(),
-                        v.totalTransactions() + 1,
-                        v.totalDeposited(), v.totalWithdrawn().add(e.amount()),
-                        e.occurredAt()));
-
-                case TransferInitiated e -> views.compute(e.aggregateId(), (id, v) ->
-                    v == null ? null : new AccountSummaryView(
-                        v.accountId(), v.owner(),
-                        v.balance().subtract(e.amount()), v.status(),
-                        v.totalTransactions() + 1,
-                        v.totalDeposited(), v.totalWithdrawn().add(e.amount()),
-                        e.occurredAt()));
-
-                case TransferCompleted e -> views.compute(e.aggregateId(), (id, v) ->
-                    v == null ? null : new AccountSummaryView(
-                        v.accountId(), v.owner(),
-                        v.balance().add(e.amount()), v.status(),
-                        v.totalTransactions() + 1,
-                        v.totalDeposited().add(e.amount()), v.totalWithdrawn(),
-                        e.occurredAt()));
-
-                case AccountFrozen e -> views.compute(e.aggregateId(), (id, v) ->
-                    v == null ? null : new AccountSummaryView(
-                        v.accountId(), v.owner(), v.balance(),
-                        BankAccount.Status.FROZEN, v.totalTransactions(),
-                        v.totalDeposited(), v.totalWithdrawn(), e.occurredAt()));
-
-                case AccountClosed e -> views.compute(e.aggregateId(), (id, v) ->
-                    v == null ? null : new AccountSummaryView(
-                        v.accountId(), v.owner(), v.balance(),
-                        BankAccount.Status.CLOSED, v.totalTransactions(),
-                        v.totalDeposited(), v.totalWithdrawn(), e.occurredAt()));
+                case MoneyDeposited e ->
+                    views.compute(e.aggregateId(), (id, v) -> applyTransaction(v, e.amount(), e.occurredAt()));
+                case MoneyWithdrawn e ->
+                    views.compute(e.aggregateId(), (id, v) -> applyTransaction(v, e.amount().negate(), e.occurredAt()));
+                case TransferInitiated e ->
+                    views.compute(e.aggregateId(), (id, v) -> applyTransaction(v, e.amount().negate(), e.occurredAt()));
+                case TransferCompleted e ->
+                    views.compute(e.aggregateId(), (id, v) -> applyTransaction(v, e.amount(), e.occurredAt()));
+                case AccountFrozen e ->
+                    views.compute(e.aggregateId(), (id, v) ->
+                        v == null ? null : new AccountSummaryView(
+                            v.accountId(), v.owner(), v.balance(),
+                            BankAccount.Status.FROZEN, v.totalTransactions(),
+                            v.totalDeposited(), v.totalWithdrawn(), e.occurredAt()));
+                case AccountClosed e ->
+                    views.compute(e.aggregateId(), (id, v) ->
+                        v == null ? null : new AccountSummaryView(
+                            v.accountId(), v.owner(), v.balance(),
+                            BankAccount.Status.CLOSED, v.totalTransactions(),
+                            v.totalDeposited(), v.totalWithdrawn(), e.occurredAt()));
             }
+        }
+
+        // delta > 0: credit (deposit/transfer-in), delta < 0: debit (withdrawal/transfer-out)
+        private AccountSummaryView applyTransaction(AccountSummaryView v, BigDecimal delta, Instant time) {
+            if (v == null) return null;
+            boolean isCredit = delta.compareTo(BigDecimal.ZERO) > 0;
+            return new AccountSummaryView(
+                v.accountId(), v.owner(),
+                v.balance().add(delta), v.status(),
+                v.totalTransactions() + 1,
+                isCredit ? v.totalDeposited().add(delta) : v.totalDeposited(),
+                isCredit ? v.totalWithdrawn() : v.totalWithdrawn().add(delta.negate()),
+                time);
         }
 
         Optional<AccountSummaryView> find(String accountId) {
@@ -509,22 +492,22 @@ public class EventSourcingDemo {
 
         void on(DomainEvent event) {
             switch (event) {
-                case MoneyDeposited e -> addEntry(e.aggregateId(),
-                    new TransactionEntry(e.aggregateId(), "DEPOSIT", e.amount(),
-                        e.description(), null, e.occurredAt()));
-
-                case MoneyWithdrawn e -> addEntry(e.aggregateId(),
-                    new TransactionEntry(e.aggregateId(), "WITHDRAWAL", e.amount().negate(),
-                        e.description(), null, e.occurredAt()));
-
-                case TransferInitiated e -> addEntry(e.aggregateId(),
-                    new TransactionEntry(e.aggregateId(), "TRANSFER_OUT", e.amount().negate(),
-                        "Transfer to " + e.targetAccountId(), null, e.occurredAt()));
-
-                case TransferCompleted e -> addEntry(e.aggregateId(),
-                    new TransactionEntry(e.aggregateId(), "TRANSFER_IN", e.amount(),
-                        "Transfer from " + e.sourceAccountId(), null, e.occurredAt()));
-
+                case MoneyDeposited e ->
+                    addEntry(e.aggregateId(),
+                        new TransactionEntry(e.aggregateId(), "DEPOSIT", e.amount(),
+                            e.description(), null, e.occurredAt()));
+                case MoneyWithdrawn e ->
+                    addEntry(e.aggregateId(),
+                        new TransactionEntry(e.aggregateId(), "WITHDRAWAL", e.amount().negate(),
+                            e.description(), null, e.occurredAt()));
+                case TransferInitiated e ->
+                    addEntry(e.aggregateId(),
+                        new TransactionEntry(e.aggregateId(), "TRANSFER_OUT", e.amount().negate(),
+                            "Transfer to " + e.targetAccountId(), null, e.occurredAt()));
+                case TransferCompleted e ->
+                    addEntry(e.aggregateId(),
+                        new TransactionEntry(e.aggregateId(), "TRANSFER_IN", e.amount(),
+                            "Transfer from " + e.sourceAccountId(), null, e.occurredAt()));
                 default -> {} // AccountOpened, Frozen, Closed không tạo transaction entry
             }
         }
@@ -620,7 +603,7 @@ public class EventSourcingDemo {
             if (snapshot.isPresent()) {
                 AccountSnapshot snap = snapshot.get();
                 List<DomainEvent> recentEvents = eventStore.loadEventsSince(accountId, snap.version());
-                return restoreFromSnapshot(snap, recentEvents);
+                return BankAccount.fromSnapshot(snap, recentEvents);
             }
             List<DomainEvent> events = eventStore.loadEvents(accountId);
             if (events.isEmpty()) throw new NoSuchElementException("Account not found: " + accountId);
@@ -637,7 +620,7 @@ public class EventSourcingDemo {
                 eventStore.append(account.accountId(), pending, expectedVersion);
                 // Take snapshot if needed
                 if (snapshotStore.shouldTakeSnapshot(account.version())) {
-                    snapshotStore.save(takeSnapshot(account));
+                    snapshotStore.save(account.toSnapshot());
                 }
             }
         }
@@ -752,7 +735,7 @@ public class EventSourcingDemo {
             snap.version(), snap.version());
         System.out.printf("  Events replayed after snapshot: %d%n", recentEvents.size());
 
-        BankAccount restored = restoreFromSnapshot(snap, recentEvents);
+        BankAccount restored = BankAccount.fromSnapshot(snap, recentEvents);
         System.out.println("  Balance: " + restored.balance());
         System.out.println("  Version: " + restored.version());
     }
@@ -824,9 +807,8 @@ public class EventSourcingDemo {
         System.out.println("Full event history:");
 
         // Replay incrementally = time-travel
-        BankAccount state = new BankAccount();
         for (DomainEvent e : allEvents) {
-            state = BankAccount.reconstitute(allEvents.subList(0, e.sequenceNumber() + 1));
+            BankAccount state = BankAccount.reconstitute(allEvents.subList(0, e.sequenceNumber() + 1));
             System.out.printf("  After [v%d] %-20s → balance=%s%n",
                 e.sequenceNumber(),
                 e.getClass().getSimpleName(),
