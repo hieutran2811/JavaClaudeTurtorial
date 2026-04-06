@@ -777,7 +777,7 @@ public class EventSourcingDemo {
         // Query side: Transaction History
         System.out.println("\n[Read Model 2: Transaction History for Alice]");
         historyProj.findByAccountLastN(accA, 10).forEach(t ->
-            System.out.printf("  %-15s %+12s  %-25s%n",
+            System.out.printf("  %-15s %+12.2f  %-25s%n",
                 t.type(), t.amount(), t.description()));
 
         System.out.println("\n[Event Store global log: " + store.totalEvents() + " total events]");

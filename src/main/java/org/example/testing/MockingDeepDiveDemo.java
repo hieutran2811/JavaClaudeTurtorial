@@ -472,8 +472,8 @@ public class MockingDeepDiveDemo {
 
         // isNull / isNotNull
         UserRepository nullCheckRepo = mock(UserRepository.class);
-        when(nullCheckRepo.save(isNull())).thenThrow(new NullPointerException("user is null"));
         when(nullCheckRepo.save(isNotNull())).thenReturn(alice);
+        when(nullCheckRepo.save(isNull())).thenThrow(new NullPointerException("user is null"));
 
         System.out.println("\nisNull / isNotNull:");
         System.out.println("  save(alice) = " + nullCheckRepo.save(alice));

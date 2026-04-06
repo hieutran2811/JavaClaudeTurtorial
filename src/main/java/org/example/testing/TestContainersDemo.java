@@ -834,14 +834,16 @@ public class TestContainersDemo {
 
             // Demo 4: Multi-container network
             demoNetworkMultiContainer();
+
+            // Demo 6: Singleton Container Pattern (cần Docker)
+            demoSingletonPattern();
         } else {
             System.out.println("\n[SKIP] Docker not available — skipping container demos.");
             System.out.println("       Install Docker Desktop to run full demo.");
         }
 
-        // Demo 5-8: Không cần Docker (concepts/patterns)
+        // Demo 5, 7, 8: Không cần Docker (concepts/patterns)
         demoWaitStrategies();
-        demoSingletonPattern();
         demoSpringIntegration();
         demoBestPractices();
 

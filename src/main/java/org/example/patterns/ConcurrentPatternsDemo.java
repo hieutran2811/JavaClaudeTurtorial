@@ -87,12 +87,7 @@ public class ConcurrentPatternsDemo {
             });
         }
 
-        // Shutdown: đưa poison pill cho mỗi consumer
-        producerPool.shutdown();
-        producerPool.awaitTermination(5, TimeUnit.SECONDS);
-        for (int c = 0; c < CONSUMERS; c++) queue.put(POISON_PILL);
-
-        // Consumers
+        // Consumers phải khởi động TRƯỚC khi gửi poison pill
         ExecutorService consumerPool = Executors.newFixedThreadPool(CONSUMERS);
         CountDownLatch done = new CountDownLatch(CONSUMERS);
         for (int c = 0; c < CONSUMERS; c++) {
@@ -108,6 +103,11 @@ public class ConcurrentPatternsDemo {
                 }
             });
         }
+
+        // Shutdown: chờ producer xong rồi mới gửi poison pill
+        producerPool.shutdown();
+        producerPool.awaitTermination(5, TimeUnit.SECONDS);
+        for (int c = 0; c < CONSUMERS; c++) queue.put(POISON_PILL);
 
         done.await(10, TimeUnit.SECONDS);
         consumerPool.shutdown();
